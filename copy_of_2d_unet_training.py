@@ -573,6 +573,32 @@ trainer = torch_em.default_segmentation_trainer(
 )
 trainer.fit(n_iterations)
 
+'''
+Error shown:
+Compiling pytorch model ...
+Start fitting for 10000 iterations /  2000 epochs
+with 5 iterations per epoch
+Training with single precision
+
+Epoch 0:   0%|          | 0/10000 [00:00<?, ?it/s]
+---------------------------------------------------------------------------
+ValueError                                Traceback (most recent call last)
+<ipython-input-77-b614125627c2> in <cell line: 13>()
+     11     # logger=None
+     12 )
+---> 13 trainer.fit(n_iterations)
+
+7 frames
+/usr/local/lib/python3.10/site-packages/torch_em/loss/dice.py in dice_score(input_, target, invert, channelwise, reduce_channel, eps)
+     54     """
+     55     if input_.shape != target.shape:
+---> 56         raise ValueError(f"Expect input and target of same shape, got: {input_.shape}, {target.shape}.")
+     57 
+     58     if channelwise:
+
+ValueError: Expect input and target of same shape, got: torch.Size([1, 3, 96, 96]), torch.Size([1, 2, 96, 96]).
+'''
+
 """## Check trained network
 
 Look at predictions from the trained network and their comparison to the target.
