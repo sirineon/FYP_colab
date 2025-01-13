@@ -55,6 +55,8 @@ condacolab.install()
 
 #!pip install torch==1.13.1
 
+!pip show torch_em
+
 # mount your google drive to permanently save data
 from google.colab import drive
 drive.mount("/content/drive")
@@ -105,8 +107,6 @@ You can find examples for the custom datasets in the comments below.
 
 You also need to choose `patch_shape`, which determines the size of the patches used for training, here.
 """
-
-
 
 # CONFIGURE ME
 
@@ -175,8 +175,10 @@ val_rois = None
 # This should be chosen s.t. it is smaller than the smallest image in your training data.
 # If you are training from 3d data (data with a z-axis), you will need to specify the patch_shape
 # as (1, shape_y, shape_x).
-patch_shape = (1, 102, 117)
+patch_shape = (96, 96) # 96 is divisble by 16 for U-Net architecture
 
+# only run if want to add shape of specific file
+'''
 import numpy as np
 import tifffile
 import os
@@ -190,6 +192,33 @@ def add_channel_dimension_and_save_as_tiff(folder):
         # Add channel dimension
         image = np.expand_dims(image, axis=0)  # Shape becomes (1, height, width)
         # Remove any unnecessary singleton dimensions
+        #image = np.squeeze(image, axis=0)  # Now shape becomes (height, width)
+        # Save with channel dimension intact
+        tifffile.imwrite(path, image)
+
+# Add channel dimension to raw images and masks
+add_channel_dimension_and_save_as_tiff("/content/drive/MyDrive/training_data/train/raw_images")
+add_channel_dimension_and_save_as_tiff("/content/drive/MyDrive/training_data/train/masks")
+
+add_channel_dimension_and_save_as_tiff("/content/drive/MyDrive/training_data/test/raw_images")
+add_channel_dimension_and_save_as_tiff("/content/drive/MyDrive/training_data/test/masks")
+'''
+
+# only run if want to squeeze shape of all files
+'''
+import numpy as np
+import tifffile
+import os
+
+def add_channel_dimension_and_save_as_tiff(folder):
+    files = [f for f in os.listdir(folder) if f.endswith('.tif')]
+    for file in files:
+        path = os.path.join(folder, file)
+        # Read the image
+        image = tifffile.imread(path)
+        # Add channel dimension
+        #image = np.expand_dims(image, axis=0)  # Shape becomes (1, height, width)
+        # Remove any unnecessary singleton dimensions
         image = np.squeeze(image, axis=0)  # Now shape becomes (height, width)
         # Save with channel dimension intact
         tifffile.imwrite(path, image)
@@ -198,11 +227,55 @@ def add_channel_dimension_and_save_as_tiff(folder):
 add_channel_dimension_and_save_as_tiff("/content/drive/MyDrive/training_data/train/raw_images")
 add_channel_dimension_and_save_as_tiff("/content/drive/MyDrive/training_data/train/masks")
 
+add_channel_dimension_and_save_as_tiff("/content/drive/MyDrive/training_data/test/raw_images")
+add_channel_dimension_and_save_as_tiff("/content/drive/MyDrive/training_data/test/masks")
+'''
+
+# only run if want to squeeze shape of specific file
+'''
+def squeeze_specific_file(folder, filename):
+    filepath = os.path.join(folder, filename)
+    if os.path.exists(filepath):
+        # Read the image
+        image = tifffile.imread(filepath)
+        # Squeeze the second dimension (index 1)
+        image = np.squeeze(image, axis=1)
+        # Save the modified image
+        tifffile.imwrite(filepath, image)
+        print(f"Squeezed '{filename}' to shape: {image.shape}")
+    else:
+        print(f"File '{filename}' not found in '{folder}'")
+
+# Call the function to squeeze the specific file
+folder_path = "/content/drive/MyDrive/training_data/train/raw_images"  # Adjust if necessary
+filename = "s300-1-raw.tif"
+squeeze_specific_file(folder_path, filename)
+'''
+
+import os
+import imageio
+
+# check shapes of all tif files
+def get_tiff_shapes(root_folder):
+    for dirpath, dirnames, filenames in os.walk(root_folder):
+        for filename in filenames:
+            if filename.endswith(".tif"):
+                filepath = os.path.join(dirpath, filename)
+                try:
+                    image = imageio.imread(filepath)
+                    print(f"File: {filepath}, Shape: {image.shape}")
+                except Exception as e:
+                    print(f"Error reading {filepath}: {e}")
+
+# Call the function with the root folder path
+root_folder = "/content/drive/MyDrive/training_data"  # Adjust if necessary
+get_tiff_shapes(root_folder)
+
 import imageio
 
 # Load a sample raw image and mask
 raw_sample = imageio.imread('/content/drive/MyDrive/training_data/train/raw_images/s300-1-raw.tif')
-mask_sample = imageio.imread('/content/drive/MyDrive/training_data/train/masks/s300-1-mask.tif')
+mask_sample = imageio.imread('/content/drive/MyDrive/training_data/train/masks/s300-1-true-mask.tif')
 
 print(f"Raw image shape: {raw_sample.shape}")
 print(f"Mask shape: {mask_sample.shape}")
@@ -251,11 +324,11 @@ Note that `affinities` and `boundaries` are mutually exclusive; `foreground` can
 # CONFIGURE ME
 
 # Whether to add a foreground channel (1 for all labels that are not zero) to the target.
-foreground = False
+foreground = True
 # Whether to add affinity channels (= directed boundaries) or a boundary channel to the target.
 # Note that you can choose at most of these two options.
 affinities = False
-boundaries = False
+boundaries = True
 
 # the pixel offsets that are used to compute the affinity channels
 offsets = [[-1, 0], [0, -1], [-3, 0], [0, -3], [-9, 0], [0, -9]]
@@ -290,6 +363,19 @@ batch_size = 1
 loss = "dice"
 metric = "dice"
 
+import os
+
+# Check the number of files in each folder
+num_train_raw_images = len([f for f in os.listdir(train_data_paths) if f.endswith('.tif')])
+num_train_label_images = len([f for f in os.listdir(train_label_paths) if f.endswith('.tif')])
+num_val_raw_images = len([f for f in os.listdir(val_data_paths) if f.endswith('.tif')])
+num_val_label_images = len([f for f in os.listdir(val_label_paths) if f.endswith('.tif')])
+
+print("Number of training raw images:", num_train_raw_images)
+print("Number of training label images:", num_train_label_images)
+print("Number of validation raw images:", num_val_raw_images)
+print("Number of validation label images:", num_val_label_images)
+
 def get_loss(loss_name):
     loss_names = ["bce", "ce", "dice"]
     if isinstance(loss_name, str):
@@ -313,6 +399,14 @@ def get_loss(loss_name):
 
 loss_function = get_loss(loss)
 metric_function = get_loss(metric)
+
+if metric == "ce":
+    metric_function = torch_em.loss.LossWrapper(metric_function, transform=lambda x, y: (x, torch.squeeze(y, 1).long()))
+
+kwargs = dict(
+    patch_shape=patch_shape
+) # removed batch_size from here
+ds = preconfigured_dataset
 
 kwargs = dict(
     ndim=2, patch_shape=patch_shape, batch_size=batch_size,
@@ -399,8 +493,8 @@ in_channels = 1 # for greyscale images
 out_channels = 3 # for 3 classes of segmentation
 
 if final_activation is None and loss == "dice":
-    final_activation = "Sigmoid"
-    print("Adding a sigmoid activation because we are using dice loss")
+    final_activation = "Softmax"  # Use Softmax for Dice loss and multi-class
+    print("Adding a Softmax activation because we are using dice loss and multi-class segmentation")
 
 if in_channels is None:
     in_channels = 1
