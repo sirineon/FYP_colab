@@ -370,7 +370,7 @@ You should check that the target looks reasonable.
 # CONFIGURE ME
 
 # choose the number of samples to check per loader
-n_samples = 4
+n_samples = 1
 
 print("Training samples")
 check_loader(train_loader, n_samples, plt=True)
@@ -395,8 +395,8 @@ initial_features = 32
 final_activation = None
 
 # If you leave the in/out_channels as None an attempt will be made to automatically deduce these numbers.
-in_channels = None
-out_channels = None
+in_channels = 1 # for greyscale images
+out_channels = 3 # for 3 classes of segmentation
 
 if final_activation is None and loss == "dice":
     final_activation = "Sigmoid"
@@ -426,7 +426,18 @@ Start the tensorboard in order to keep track of the training progress.
 """
 
 # Commented out IPython magic to ensure Python compatibility.
+# load tensorboard extension
+# we will need this later in the notebook to monitor the training progress
+# %load_ext tensorboard
+# %%
+import tensorflow as tf # Import TensorFlow here
+
+# ... rest of the code ...
+logdir = "./logs"  # or wherever your logs are being saved
+
 # %tensorboard --logdir logs
+
+tf.debugging.experimental.enable_dump_debug_info(logdir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
 
 """## Training
 
@@ -444,6 +455,15 @@ This also starts the training!
 experiment_name = "my-shiny-net"
 n_iterations = 10000
 learning_rate = 1.0e-4
+
+# Add this snippet before creating the train_loader
+import os
+
+if preconfigured_dataset is None:
+    print("Number of training images:", len(os.listdir(train_data_paths)))
+    print("Number of training labels:", len(os.listdir(train_label_paths)))
+    print("Number of validation images:", len(os.listdir(val_data_paths)))
+    print("Number of validation labels:", len(os.listdir(val_label_paths)))
 
 # IMPORTANT! if your session on google colab crashes here, you will need to uncomment the 'logger=None' comment
 # in this case you can't use tensorboard, but everything else will work as expected
