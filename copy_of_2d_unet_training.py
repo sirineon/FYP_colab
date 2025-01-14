@@ -510,7 +510,7 @@ You should check that the target looks reasonable.
 # CONFIGURE ME
 
 # choose the number of samples to check per loader
-n_samples = 1
+n_samples = 2
 
 print("Training samples")
 check_loader(train_loader, n_samples, plt=True)
@@ -592,8 +592,8 @@ This also starts the training!
 """
 
 # CONFIGURE ME
-experiment_name = "my-shiny-net"
-n_iterations = 10000
+experiment_name = "2D-UNet-14Jan25-1"
+n_iterations = 1000
 learning_rate = 1.0e-4
 
 # Add this snippet before creating the train_loader
@@ -619,32 +619,6 @@ trainer = torch_em.default_segmentation_trainer(
 )
 trainer.fit(n_iterations)
 
-'''
-Error shown:
-Compiling pytorch model ...
-Start fitting for 10000 iterations /  2000 epochs
-with 5 iterations per epoch
-Training with single precision
-
-Epoch 0:   0%|          | 0/10000 [00:00<?, ?it/s]
----------------------------------------------------------------------------
-ValueError                                Traceback (most recent call last)
-<ipython-input-77-b614125627c2> in <cell line: 13>()
-     11     # logger=None
-     12 )
----> 13 trainer.fit(n_iterations)
-
-7 frames
-/usr/local/lib/python3.10/site-packages/torch_em/loss/dice.py in dice_score(input_, target, invert, channelwise, reduce_channel, eps)
-     54     """
-     55     if input_.shape != target.shape:
----> 56         raise ValueError(f"Expect input and target of same shape, got: {input_.shape}, {target.shape}.")
-     57
-     58     if channelwise:
-
-ValueError: Expect input and target of same shape, got: torch.Size([1, 3, 96, 96]), torch.Size([1, 2, 96, 96]).
-'''
-
 """## Check trained network
 
 Look at predictions from the trained network and their comparison to the target.
@@ -665,7 +639,7 @@ You only need to configure where to save the model via `export_folder` and wheth
 
 # The folder where the bioimageio model will be saved (as a .zip file).
 # If you run in google colab you should adapt this path to your google drive so that you can download the saved model.
-export_folder = "./my-fancy-bio-model"
+export_folder = "/content/drive/MyDrive"
 
 # Whether to convert the model weights to additional formats.
 # Currently, torchscript and onnx are support it and this will enable running the model
@@ -679,18 +653,23 @@ doc = None
 # This is a fancy model to segment shiny objects in images.
 # """
 
+!pip install --upgrade torch-em # upgrade torch-em to the latest version
+
+import torch_em.util.modelzoo
+help(torch_em.util.modelzoo.export_bioimageio_model)
+
 import torch_em.util.modelzoo
 
 for_dij = additional_weight_formats is not None and "torchscript" in additional_weight_formats
 
-training_data = None
+training_dataset = None
 if preconfigured_dataset is not None:
     if preconfigured_dataset == "vnc-mitos":
         data_id = torchem_data.get_bioimageio_dataset_id("vnc")
     else:
         data_id = torchem_data.get_bioimageio_dataset_id(preconfigured_dataset)
     if data_id:
-        training_data = {"id": data_id}
+        training_dataset = {"id": data_id}
 
 pred_str = ""
 if affinities:
@@ -717,7 +696,9 @@ if doc is None:
     doc = default_doc
 
 torch_em.util.modelzoo.export_bioimageio_model(
-    trainer, export_folder, input_optional_parameters=True,
-    for_deepimagej=for_dij, training_data=training_data, documentation=doc
+    trainer, export_folder,
+    input_optional_parameters=True,
+    for_deepimagej=for_dij, training_dataset=training_dataset, documentation=doc
 )
+
 torch_em.util.modelzoo.add_weight_formats(export_folder, additional_weight_formats)
